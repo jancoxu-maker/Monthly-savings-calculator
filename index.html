@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>存钱计算器</title>
+<meta name="theme-color" content="#0b0f1a">
+<!-- 可添加到 iPhone 主屏，全屏运行 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="存钱">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%235b6cff'/%3E%3Ctext x='90' y='124' font-size='96' text-anchor='middle'%3E%F0%9F%90%B7%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --bg2: #121829;
+    --card: rgba(255,255,255,.04);
+    --card-border: rgba(255,255,255,.08);
+    --card-strong: rgba(255,255,255,.06);
+    --text: #eef1f8;
+    --muted: #8b94ab;
+    --faint: #5d6680;
+    --indigo: #6d7cff;
+    --violet: #9a6bff;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --sky: #38bdf8;
+    --red: #fb7185;
+    --radius: 22px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(122,92,255,.18), transparent 60%),
+      radial-gradient(900px 500px at -10% 10%, rgba(56,189,248,.12), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: max(20px, env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 440px; margin: 0 auto; }
+
+  .topbar { display: flex; align-items: center; gap: 10px; margin: 6px 4px 20px; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--indigo), var(--violet));
+    font-size: 20px; box-shadow: 0 8px 22px rgba(109,124,255,.35);
+  }
+  .topbar .t { font-size: 18px; font-weight: 700; letter-spacing: .2px; }
+  .topbar .s { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 14px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .lbl { font-size: 13px; color: var(--muted); margin-bottom: 10px; font-weight: 500; letter-spacing: .2px; }
+
+  /* 工资输入 */
+  .salary-field {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--card-strong);
+    border: 1.5px solid var(--card-border);
+    border-radius: 16px; padding: 6px 16px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .salary-field:focus-within { border-color: var(--indigo); box-shadow: 0 0 0 4px rgba(109,124,255,.15); }
+  .salary-field .yen { font-size: 26px; font-weight: 700; color: var(--faint); }
+  #salary {
+    flex: 1; width: 100%; background: none; border: none; outline: none;
+    font-size: 32px; font-weight: 800; color: var(--text); padding: 10px 0;
+    font-family: inherit; letter-spacing: .5px;
+  }
+  #salary::placeholder { color: var(--faint); font-weight: 700; }
+
+  /* Hero 结果 */
+  .hero {
+    background: linear-gradient(150deg, #5b6cff 0%, #7c5cff 55%, #9a6bff 100%);
+    border: none;
+    position: relative; overflow: hidden;
+    box-shadow: 0 18px 50px -12px rgba(109,92,255,.6);
+  }
+  .hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(420px 220px at 90% 0%, rgba(255,255,255,.25), transparent 60%);
+    pointer-events: none;
+  }
+  .hero .cap { font-size: 13px; color: rgba(255,255,255,.85); font-weight: 500; }
+  .hero .big {
+    font-size: 46px; font-weight: 850; letter-spacing: .5px; margin-top: 6px; line-height: 1.05;
+    transition: transform .25s cubic-bezier(.2,1.4,.4,1);
+  }
+  .hero .big.pulse { transform: scale(1.06); }
+  .hero .big.neg { color: #ffe1e6; }
+  .hero .big .cu { font-size: 26px; font-weight: 700; opacity: .8; margin-right: 2px; }
+  .hero .heronote { font-size: 12.5px; color: rgba(255,255,255,.8); margin-top: 8px; min-height: 16px; }
+
+  /* 三账户 chips */
+  .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; position: relative; z-index: 1; }
+  .chip {
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 15px; padding: 11px 8px; text-align: center;
+    backdrop-filter: blur(4px);
+  }
+  .chip .ci { font-size: 16px; }
+  .chip .cn { font-size: 11px; color: rgba(255,255,255,.82); margin-top: 1px; }
+  .chip .cv { font-size: 14.5px; font-weight: 800; margin-top: 3px; color: #fff; }
+  .chip .cv.neg { color: #ffe1e6; }
+
+  /* 保存记录 */
+  .save-row { display: flex; gap: 10px; margin-top: 16px; position: relative; z-index: 1; }
+  .save-row input[type="month"] {
+    flex: 0 0 auto; padding: 11px 12px; font-size: 14px; font-weight: 600;
+    border: 1px solid rgba(255,255,255,.22); border-radius: 13px; outline: none;
+    background: rgba(255,255,255,.14); color: #fff; font-family: inherit;
+  }
+  .save-row input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(.7); }
+  .save-rec-btn {
+    flex: 1; padding: 11px; border: none; cursor: pointer; font-family: inherit;
+    background: rgba(255,255,255,.95); color: #4b3bff;
+    border-radius: 13px; font-size: 14px; font-weight: 800; transition: transform .12s, background .2s;
+  }
+  .save-rec-btn:active { transform: scale(.97); }
+
+  /* 明细 */
+  .sec-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .sec-h h2 { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: .3px; }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 14px;
+  }
+  .row:last-child { border-bottom: none; }
+  .row .name { color: var(--text); flex: 1; font-weight: 500; }
+  .row .name small { display: block; color: var(--faint); font-size: 11px; margin-top: 3px; font-weight: 400; }
+  .row .val { font-weight: 700; white-space: nowrap; }
+  .val.in  { color: var(--green); }
+  .val.out { color: var(--red); }
+  .val.keep{ color: var(--amber); }
+  .val.save{ color: var(--indigo); }
+  .row.total { border-top: 1px solid rgba(255,255,255,.12); margin-top: 4px; padding-top: 15px; border-bottom: none; }
+  .row.total .name { font-weight: 700; }
+  .row.total .val { font-size: 18px; color: #b9c0ff; }
+
+  /* 自定义费用 */
+  .custom-item { display: flex; gap: 8px; align-items: center; margin-bottom: 9px; }
+  .custom-item input {
+    background: var(--card-strong); border: 1px solid var(--card-border); color: var(--text);
+    border-radius: 11px; outline: none; font-family: inherit; transition: border-color .2s;
+  }
+  .custom-item input:focus { border-color: var(--indigo); }
+  .custom-item input.ci-name { flex: 1.4; padding: 11px 12px; font-size: 14px; font-weight: 500; }
+  .custom-item input.ci-amt { flex: 1; padding: 11px 12px; font-size: 14px; font-weight: 600; }
+  .custom-item input::placeholder { color: var(--faint); }
+  .ci-del {
+    width: 36px; height: 36px; flex: 0 0 36px; border: none; cursor: pointer;
+    background: rgba(251,113,133,.14); color: var(--red); border-radius: 11px; font-size: 20px; line-height: 1;
+    transition: background .2s;
+  }
+  .ci-del:active { background: rgba(251,113,133,.28); }
+  .add-btn {
+    width: 100%; padding: 12px; margin-top: 4px; cursor: pointer; font-family: inherit;
+    border: 1.5px dashed rgba(109,124,255,.4); background: rgba(109,124,255,.08); color: #aab2ff;
+    border-radius: 13px; font-size: 14px; font-weight: 700; transition: background .2s;
+  }
+  .add-btn:active { background: rgba(109,124,255,.18); }
+  .empty-hint { color: var(--faint); font-size: 13px; text-align: center; padding: 4px 0 12px; }
+
+  /* 历史 */
+  .clear-all { border: none; background: none; color: var(--faint); font-size: 12px; cursor: pointer; font-family: inherit; }
+  .clear-all:active { color: var(--red); }
+  .cum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 16px; }
+  .cum-box { background: var(--card-strong); border: 1px solid var(--card-border); border-radius: 14px; padding: 13px 8px; text-align: center; }
+  .cum-box .l { font-size: 10.5px; color: var(--muted); }
+  .cum-box .v { font-size: 16px; font-weight: 800; margin-top: 4px; color: #b9c0ff; }
+  .cum-box.bank .v { color: var(--amber); }
+  .cum-box.zfb .v { color: var(--sky); }
+  .hist-item { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-item .m {
+    flex: 0 0 auto; font-size: 12px; font-weight: 800; color: var(--text);
+    background: var(--card-strong); border: 1px solid var(--card-border);
+    padding: 8px 10px; border-radius: 11px; text-align: center; min-width: 58px;
+  }
+  .hist-item .det { flex: 1; font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .hist-item .det b { color: #b9c0ff; font-weight: 800; font-size: 13px; }
+  .hist-item .hdel {
+    flex: 0 0 30px; width: 30px; height: 30px; border: none; cursor: pointer;
+    background: rgba(251,113,133,.14); color: var(--red); border-radius: 9px; font-size: 17px; line-height: 1;
+  }
+  .hist-empty { color: var(--faint); font-size: 13px; text-align: center; padding: 10px 0; }
+
+  /* 设置 */
+  details summary { cursor: pointer; font-size: 14px; color: var(--muted); list-style: none; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary .chev { transition: transform .2s; font-size: 12px; }
+  details[open] summary .chev { transform: rotate(90deg); }
+  .const-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .const-grid label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .const-grid input {
+    width: 100%; padding: 10px 12px; font-size: 14px; font-weight: 600; font-family: inherit;
+    background: var(--card-strong); border: 1px solid var(--card-border); border-radius: 11px; outline: none; color: var(--text);
+  }
+  .const-grid input:focus { border-color: var(--indigo); }
+  .footer { text-align: center; color: var(--faint); font-size: 11px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="logo">🐷</div>
+    <div>
+      <div class="t">存钱计算器</div>
+      <div class="s">输入工资，自动分配三个账户</div>
+    </div>
+  </div>
+
+  <!-- 工资输入 -->
+  <div class="card">
+    <div class="lbl">本月到账工资</div>
+    <div class="salary-field">
+      <span class="yen">¥</span>
+      <input type="number" id="salary" placeholder="0" inputmode="decimal">
+    </div>
+  </div>
+
+  <!-- Hero 结果 -->
+  <div class="card hero">
+    <div class="cap">本月应存入余额宝</div>
+    <div class="big" id="heroBig"><span class="cu">¥</span>0.00</div>
+    <div class="heronote" id="acctNote">先输入工资 ☝️</div>
+
+    <div class="chips">
+      <div class="chip">
+        <div class="ci">🏦</div><div class="cn">银行卡留存</div>
+        <div class="cv" id="a-bank">0.00</div>
+      </div>
+      <div class="chip">
+        <div class="ci">📱</div><div class="cn">支付宝</div>
+        <div class="cv" id="a-zfb">0.00</div>
+      </div>
+      <div class="chip">
+        <div class="ci">🐷</div><div class="cn">余额宝</div>
+        <div class="cv" id="a-yeb">0.00</div>
+      </div>
+    </div>
+
+    <div class="save-row">
+      <input type="month" id="recMonth">
+      <button class="save-rec-btn" id="saveRec">保存本月</button>
+    </div>
+  </div>
+
+  <!-- 明细 -->
+  <div class="card">
+    <div class="sec-h"><h2>资金分配明细</h2></div>
+    <div class="row">
+      <span class="name">工资卡收到工资</span>
+      <span class="val in" id="r-salary">¥ 0.00</span>
+    </div>
+    <div class="row">
+      <span class="name">公积金贷款<small id="gjj-note"></small></span>
+      <span class="val out" id="r-gjj">¥ 0.00</span>
+    </div>
+    <div class="row">
+      <span class="name">车位贷款</span>
+      <span class="val out" id="r-cw">¥ 0.00</span>
+    </div>
+    <div class="row">
+      <span class="name">支付宝生活费<small>转入支付宝</small></span>
+      <span class="val out" id="r-zfb">¥ 0.00</span>
+    </div>
+    <div class="row">
+      <span class="name">捐款 + 杂费<small>留在银行卡，不动</small></span>
+      <span class="val keep" id="r-keep">¥ 0.00</span>
+    </div>
+    <div id="customRows"></div>
+    <div class="row total">
+      <span class="name">→ 存入余额宝</span>
+      <span class="val save" id="r-save">¥ 0.00</span>
+    </div>
+  </div>
+
+  <!-- 自定义费用 -->
+  <div class="card">
+    <div class="sec-h"><h2>其他自定义费用</h2></div>
+    <div id="customList"></div>
+    <button class="add-btn" id="addCustom">＋ 添加费用项</button>
+  </div>
+
+  <!-- 历史 -->
+  <div class="card">
+    <div class="sec-h">
+      <h2>📅 每月历史记录</h2>
+      <button class="clear-all" id="clearAll">清空</button>
+    </div>
+    <div class="cum">
+      <div class="cum-box bank"><div class="l">累计银行卡</div><div class="v" id="cum-bank">0.00</div></div>
+      <div class="cum-box zfb"><div class="l">累计支付宝</div><div class="v" id="cum-zfb">0.00</div></div>
+      <div class="cum-box"><div class="l">累计余额宝</div><div class="v" id="cum-yeb">0.00</div></div>
+    </div>
+    <div id="histList"></div>
+  </div>
+
+  <!-- 设置 -->
+  <div class="card">
+    <details>
+      <summary><span class="chev">▶</span> 调整固定金额（每月不变的项）</summary>
+      <div class="const-grid">
+        <div><label>公积金贷款支出</label><input type="number" id="c-gjjLoan" value="4261"></div>
+        <div><label>公积金每月打入</label><input type="number" id="c-gjjIn" value="2072.32"></div>
+        <div><label>车位贷款</label><input type="number" id="c-cw" value="1051"></div>
+        <div><label>支付宝生活费</label><input type="number" id="c-zfb" value="4000"></div>
+        <div><label>捐款</label><input type="number" id="c-donate" value="100"></div>
+        <div><label>杂费</label><input type="number" id="c-misc" value="100"></div>
+      </div>
+    </details>
+  </div>
+
+  <p class="footer">数据仅保存在本机浏览器，不会上传 · 可添加到手机主屏</p>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const fmt = n => "¥ " + n.toLocaleString("zh-CN", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const fmt0 = n => n.toLocaleString("zh-CN", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const num = id => parseFloat($(id).value) || 0;
+
+  const baseInputs = ["salary","c-gjjLoan","c-gjjIn","c-cw","c-zfb","c-donate","c-misc"];
+  let customItems = [];
+  let history = [];
+  let last = {};
+  let prevYeb = null;
+
+  const STORE = "cunqian_v2";
+  const HSTORE = "cunqian_history_v1";
+
+  function save() {
+    localStorage.setItem(STORE, JSON.stringify({
+      base: Object.fromEntries(baseInputs.map(id => [id, $(id).value])),
+      custom: customItems
+    }));
+  }
+
+  function renderCustomList() {
+    const list = $("customList");
+    list.innerHTML = "";
+    if (customItems.length === 0) {
+      list.innerHTML = '<div class="empty-hint">暂无其他费用，点下方按钮添加</div>';
+    }
+    customItems.forEach((item, i) => {
+      const row = document.createElement("div");
+      row.className = "custom-item";
+      row.innerHTML = `
+        <input class="ci-name" type="text" placeholder="费用名称（如：保险）" value="${item.name.replace(/"/g,'&quot;')}">
+        <input class="ci-amt" type="number" inputmode="decimal" placeholder="金额" value="${item.amount}">
+        <button class="ci-del" title="删除">×</button>`;
+      const [nameEl, amtEl] = row.querySelectorAll("input");
+      nameEl.addEventListener("input", e => { customItems[i].name = e.target.value; calc(); });
+      amtEl.addEventListener("input", e => { customItems[i].amount = e.target.value; calc(); });
+      row.querySelector(".ci-del").addEventListener("click", () => {
+        customItems.splice(i, 1); renderCustomList(); calc();
+      });
+      list.appendChild(row);
+    });
+  }
+
+  function calc() {
+    const salary  = num("salary");
+    const gjjLoan = num("c-gjjLoan");
+    const gjjIn   = num("c-gjjIn");
+    const cw      = num("c-cw");
+    const zfb     = num("c-zfb");
+    const keep    = num("c-donate") + num("c-misc");
+    const gjjNet  = gjjLoan - gjjIn;
+    const customTotal = customItems.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
+    const yeb = salary - gjjNet - cw - zfb - keep - customTotal;
+
+    $("r-salary").textContent = fmt(salary);
+    $("r-gjj").textContent     = "-" + fmt(gjjNet);
+    $("gjj-note").textContent  = `支出 ${gjjLoan}，公积金打入 ${gjjIn}，实付 ${gjjNet.toFixed(2)}`;
+    $("r-cw").textContent      = "-" + fmt(cw);
+    $("r-zfb").textContent     = "-" + fmt(zfb);
+    $("r-keep").textContent    = fmt(keep);
+    $("r-save").textContent    = fmt(yeb);
+
+    const cr = $("customRows");
+    cr.innerHTML = "";
+    customItems.forEach(it => {
+      const amt = parseFloat(it.amount) || 0;
+      if (!it.name && !amt) return;
+      const div = document.createElement("div");
+      div.className = "row";
+      div.innerHTML = `<span class="name">${(it.name||"其他费用").replace(/</g,'&lt;')}</span>
+                       <span class="val out">-${fmt(amt)}</span>`;
+      cr.appendChild(div);
+    });
+
+    // Hero 大数字
+    const big = $("heroBig");
+    big.innerHTML = `<span class="cu">¥</span>${fmt0(yeb)}`;
+    big.classList.toggle("neg", yeb < 0);
+    if (prevYeb !== null && yeb !== prevYeb) {
+      big.classList.remove("pulse"); void big.offsetWidth; big.classList.add("pulse");
+    }
+    prevYeb = yeb;
+
+    // chips
+    $("a-bank").textContent = fmt0(keep);
+    $("a-zfb").textContent  = fmt0(zfb);
+    const yebEl = $("a-yeb");
+    yebEl.textContent = fmt0(yeb);
+    yebEl.classList.toggle("neg", yeb < 0);
+
+    const note = $("acctNote");
+    if (salary <= 0)      note.textContent = "先输入工资 ☝️";
+    else if (yeb < 0)     note.textContent = "⚠️ 工资不足以覆盖所有支出";
+    else                  note.textContent = `固定+其他支出共 ${(gjjNet + cw + zfb + keep + customTotal).toFixed(2)}`;
+
+    last = { salary, bank: keep, zfb, yeb };
+    save();
+  }
+
+  /* 历史记录 */
+  function saveHistory() { localStorage.setItem(HSTORE, JSON.stringify(history)); }
+
+  function renderHistory() {
+    const list = $("histList");
+    list.innerHTML = "";
+    let cb = 0, cz = 0, cy = 0;
+    history.forEach(h => { cb += h.bank; cz += h.zfb; cy += h.yeb; });
+    $("cum-bank").textContent = fmt0(cb);
+    $("cum-zfb").textContent  = fmt0(cz);
+    $("cum-yeb").textContent  = fmt0(cy);
+
+    if (history.length === 0) {
+      list.innerHTML = '<div class="hist-empty">还没有记录，算好后点「保存本月」</div>';
+      return;
+    }
+    [...history].sort((a, b) => b.month.localeCompare(a.month)).forEach(h => {
+      const idx = history.indexOf(h);
+      const div = document.createElement("div");
+      div.className = "hist-item";
+      div.innerHTML = `
+        <div class="m">${h.month.replace("-", ".")}</div>
+        <div class="det">工资 ${fmt0(h.salary)} ｜ 银行卡 ${fmt0(h.bank)} ｜ 支付宝 ${fmt0(h.zfb)}<br>
+          存入余额宝 <b>${fmt0(h.yeb)}</b></div>
+        <button class="hdel" title="删除">×</button>`;
+      div.querySelector(".hdel").addEventListener("click", () => {
+        history.splice(idx, 1); saveHistory(); renderHistory();
+      });
+      list.appendChild(div);
+    });
+  }
+
+  function saveRecord() {
+    const month = $("recMonth").value;
+    if (!month) { alert("请先选择月份"); return; }
+    if (!last.salary || last.salary <= 0) { alert("请先输入工资"); return; }
+    const rec = { month, salary: last.salary, bank: last.bank, zfb: last.zfb, yeb: last.yeb };
+    const existing = history.findIndex(h => h.month === month);
+    if (existing >= 0) {
+      if (!confirm(`${month} 已有记录，覆盖它吗？`)) return;
+      history[existing] = rec;
+    } else {
+      history.push(rec);
+    }
+    saveHistory(); renderHistory();
+    const btn = $("saveRec"); const t = btn.textContent;
+    btn.textContent = "✅ 已保存"; setTimeout(() => btn.textContent = t, 1200);
+  }
+
+  // 恢复
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || "{}");
+    if (saved.base) baseInputs.forEach(id => { if (saved.base[id] != null && saved.base[id] !== "") $(id).value = saved.base[id]; });
+    if (Array.isArray(saved.custom)) customItems = saved.custom;
+  } catch(e) {}
+  try {
+    const h = JSON.parse(localStorage.getItem(HSTORE) || "[]");
+    if (Array.isArray(h)) history = h;
+  } catch(e) {}
+
+  const now = new Date();
+  $("recMonth").value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  $("addCustom").addEventListener("click", () => { customItems.push({ name: "", amount: "" }); renderCustomList(); calc(); });
+  baseInputs.forEach(id => $(id).addEventListener("input", calc));
+  $("saveRec").addEventListener("click", saveRecord);
+  $("clearAll").addEventListener("click", () => {
+    if (history.length && confirm("确定清空所有历史记录吗？")) { history = []; saveHistory(); renderHistory(); }
+  });
+
+  renderCustomList();
+  renderHistory();
+  calc();
+</script>
+</body>
+</html>
