@@ -1,0 +1,11 @@
+{
+  "name": "存钱计算器",
+  "short_name": "存钱",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0b0f1a",
+  "theme_color": "#0b0f1a",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
